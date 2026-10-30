@@ -19,6 +19,9 @@ def load_data():
     file_path = os.path.join(current_dir, "main_data.csv")
     
     df = pd.read_csv(file_path)
+# Membuat kolom datetime secara otomatis dari kolom year, month, day, hour
+    if 'datetime' not in df.columns:
+        df['datetime'] = pd.to_datetime(df[['year', 'month', 'day', 'hour']])
     return df
 
 df_cleaned = load_data()
