@@ -3,29 +3,26 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import streamlit as st
 
-# Konfigurasi halaman Streamlit agar lebar
-st.set_page_config(page_title="Dashboard Analisis Kualitas Udara Aotizhongxin", layout="wide")
+# Konfigurasi halaman Streamlit
+st.set_page_config(page_title="Dashboard Analisis Kualitas Udara", layout="wide")
 
 # Judul Dashboard
 st.title("Dashboard Analisis Kualitas Udara Stasiun Aotizhongxin 🌍")
-st.markdown("---")
 
 # Memuat data bersih
 @st.cache_data
 def load_data():
     df = pd.read_csv("main_data.csv")
-    # Pastikan kolom tanggal diubah ke datetime jika ingin menggunakan date_input
-    df['datetime'] = pd.to_datetime(df[['year', 'month', 'day', 'hour']])
     return df
 
-df = load_data()
+df_cleaned = load_data()
 
-# --- SIDEBAR: KOMPONEN INTERAKTIF SESUAI PERMINTAAN REVIEWER ---
-st.sidebar.header("Filter Interaktif Dashboard 🔍")
+# --- SIDEBAR: FITUR INTERAKTIF ---
+st.sidebar.header("Filter Interaktif 🔍")
 
 # 1. st.date_input() untuk menyaring data berdasarkan rentang tanggal
-min_date = df['datetime'].min().date()
-max_date = df['datetime'].max().date()
+min_date = df_cleaned['datetime'].min().date()
+max_date = df_cleaned['datetime'].max().date()
 
 start_date, end_date = st.sidebar.date_input(
     label="Pilih Periode Waktu:",
@@ -34,13 +31,13 @@ start_date, end_date = st.sidebar.date_input(
     max_value=max_date
 )
 
-# 2. st.selectbox() untuk memilih tahun tertentu
-years = sorted(df['year'].unique())
-selected_year = st.sidebar.selectbox("Pilih Tahun Pengamatan:", options=['Semua Tahun'] + list(years))
+# 2. Filter Interaktif Berdasarkan Tahun (selectbox / multiselect)
+years = sorted(df_cleaned['year'].unique())
+selected_year = st.sidebar.selectbox("Pilih Tahun:", options=['Semua'] + list(years))
 
-# 3. st.slider() untuk rentang kecepatan angin (WSPM)
-min_wspm = float(df['WSPM'].min())
-max_wspm = float(df['WSPM'].max())
+# 3. Filter Interaktif Berdasarkan Rentang Kecepatan Angin (slider)
+min_wspm = float(df_cleaned['WSPM'].min())
+max_wspm = float(df_cleaned['WSPM'].max())
 selected_wspm = st.sidebar.slider(
     "Rentang Kecepatan Angin (WSPM):",
     min_value=min_wspm,
@@ -48,17 +45,16 @@ selected_wspm = st.sidebar.slider(
     value=(min_wspm, max_wspm)
 )
 
-# --- PENERAPAN FILTER KE DATAFRAME ---
-filtered_df = df[
-    (df['datetime'].dt.date >= start_date) & 
-    (df['datetime'].dt.date <= end_date) & 
-    (df['WSPM'] >= selected_wspm[0]) & 
-    (df['WSPM'] <= selected_wspm[1])
+# Terapkan Filter ke DataFrame
+filtered_df = df_cleaned[
+    (df_cleaned['datetime'].dt.date >= start_date) & 
+    (df_cleaned['datetime'].dt.date <= end_date) & 
+    (df_cleaned['WSPM'] >= selected_wspm[0]) & 
+    (df_cleaned['WSPM'] <= selected_wspm[1])
 ]
 
-if selected_year != 'Semua Tahun':
+if selected_year != 'Semua':
     filtered_df = filtered_df[filtered_df['year'] == selected_year]
-
 
 # --- KOTAK METRIK UTAMA (KPI) ---
 col1, col2, col3 = st.columns(3)
@@ -74,27 +70,25 @@ with col3:
 
 st.markdown("---")
 
-
-# --- VISUALISASI 1: Tren Rata-rata PM2.5 per Tahun ---
+# --- VISUALISASI 1: Tren Rata-rata Konsentrasi PM2.5 per Tahun ---
 st.subheader("1. Tren Rata-rata Konsentrasi PM2.5 dari Tahun ke Tahun")
-pm25_yearly = df.groupby('year')['PM2.5'].mean().reset_index()
+pm25_yearly = df_cleaned.groupby('year')['PM2.5'].mean().reset_index()
 
 fig, ax = plt.subplots(figsize=(10, 4))
-ax.plot(pm25_yearly['year'], pm25_yearly['PM2.5'], marker='o', color='b', linewidth=2, linestyle='-')
-ax.set_title("Rata-rata PM2.5 per Tahun (2013-2017)")
+ax.plot(pm25_yearly['year'], pm25_yearly['PM2.5'], marker='o', color='b', linestyle='-')
+ax.set_title("Rata-rata PM2.5 per Tahun")
 ax.set_xlabel("Tahun")
-ax.set_ylabel("PM2.5 (µg/m³)")
+ax.set_ylabel("PM2.5 ($\mu g/m^3$)")
 ax.grid(True)
 st.pyplot(fig)
 
 
-# --- VISUALISASI 2: Hubungan Kecepatan Angin (WSPM) dan PM10 (Dinamis) ---
+# --- VISUALISASI 2: Hubungan Kecepatan Angin (WSPM) dan PM10 (Dinamis dengan Filter) ---
 st.subheader("2. Hubungan Kecepatan Angin (WSPM) dan Konsentrasi PM10")
-st.write(f"Menampilkan data tersaring (Periode: {start_date} s.d. {end_date} | Tahun: {selected_year})")
 
 fig, ax = plt.subplots(figsize=(10, 5))
 sns.scatterplot(x='WSPM', y='PM10', data=filtered_df, alpha=0.4, color='purple', ax=ax)
-ax.set_title("Scatter Plot WSPM vs PM10 Berdasarkan Filter")
+ax.set_title(f"Scatter Plot WSPM vs PM10 (Filter Tahun: {selected_year})")
 ax.set_xlabel("Kecepatan Angin (WSPM)")
 ax.set_ylabel("Konsentrasi PM10")
 st.pyplot(fig)
