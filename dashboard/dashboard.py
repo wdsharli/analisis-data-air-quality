@@ -12,7 +12,12 @@ st.title("Dashboard Analisis Kualitas Udara Stasiun Aotizhongxin 🌍")
 # Memuat data bersih
 @st.cache_data
 def load_data():
-    df = pd.read_csv("main_data.csv")
+    # Mendapatkan direktori tempat file dashboard.py ini berada
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Menggabungkan direktori tersebut dengan nama file CSV
+    file_path = os.path.join(current_dir, "main_data.csv")
+    
+    df = pd.read_csv(file_path)
     return df
 
 df_cleaned = load_data()
